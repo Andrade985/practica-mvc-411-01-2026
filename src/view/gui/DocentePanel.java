@@ -1,0 +1,443 @@
+package view.gui;
+
+import model.Docente;
+import service.DocenteService;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+
+public class DocentePanel extends JPanel {
+
+    private JTable tabla;
+    private DefaultTableModel modelo;
+    private JTextField txtBuscar;
+
+    public DocentePanel() {
+
+        setLayout(new BorderLayout());
+        setBackground(Color.WHITE);
+
+        // ───────────── TITULO ─────────────
+        JLabel titulo = new JLabel("  Gestion de Docentes");
+
+        titulo.setFont(new Font("Arial", Font.BOLD, 16));
+
+        titulo.setForeground(new Color(33, 97, 140));
+
+        titulo.setBorder(
+                BorderFactory.createEmptyBorder(10, 10, 5, 10)
+        );
+
+        add(titulo, BorderLayout.NORTH);
+
+        // ───────────── BARRA BUSQUEDA ─────────────
+        JPanel barraTop = new JPanel(
+                new FlowLayout(FlowLayout.LEFT)
+        );
+
+        barraTop.setBackground(Color.WHITE);
+
+        txtBuscar = new JTextField(20);
+
+        JButton btnBuscar = new JButton("Buscar");
+        JButton btnLimpiar = new JButton("Limpiar");
+
+        btnBuscar.setBackground(new Color(52, 152, 219));
+        btnBuscar.setForeground(Color.WHITE);
+
+        btnLimpiar.setBackground(Color.GRAY);
+        btnLimpiar.setForeground(Color.WHITE);
+
+        barraTop.add(new JLabel("Buscar: "));
+        barraTop.add(txtBuscar);
+        barraTop.add(btnBuscar);
+        barraTop.add(btnLimpiar);
+
+        // ───────────── TABLA ─────────────
+        modelo = new DefaultTableModel(
+                new String[]{
+                        "ID",
+                        "Nombre",
+                        "Especialidad"
+                },
+                0
+        ) {
+            @Override
+            public boolean isCellEditable(int fila, int columna) {
+                return false;
+            }
+        };
+
+        tabla = new JTable(modelo);
+
+        tabla.setSelectionMode(
+                ListSelectionModel.SINGLE_SELECTION
+        );
+
+        tabla.getTableHeader().setBackground(
+                new Color(33, 97, 140)
+        );
+
+        tabla.getTableHeader().setForeground(Color.WHITE);
+
+        tabla.setRowHeight(22);
+
+        tabla.setGridColor(new Color(220, 220, 220));
+
+        JScrollPane scroll = new JScrollPane(tabla);
+
+        JPanel centro = new JPanel(new BorderLayout());
+
+        centro.setBackground(Color.WHITE);
+
+        centro.add(barraTop, BorderLayout.NORTH);
+        centro.add(scroll, BorderLayout.CENTER);
+
+        add(centro, BorderLayout.CENTER);
+
+        // ───────────── BOTONES ─────────────
+        JPanel barraBot = new JPanel(
+                new FlowLayout(FlowLayout.CENTER, 15, 10)
+        );
+
+        barraBot.setBackground(Color.WHITE);
+
+        JButton btnRegistrar = crearBoton(
+                "Registrar",
+                new Color(39, 174, 96)
+        );
+
+        JButton btnEditar = crearBoton(
+                "Editar",
+                new Color(52, 152, 219)
+        );
+
+        JButton btnEliminar = crearBoton(
+                "Eliminar",
+                new Color(231, 76, 60)
+        );
+
+        barraBot.add(btnRegistrar);
+        barraBot.add(btnEditar);
+        barraBot.add(btnEliminar);
+
+        add(barraBot, BorderLayout.SOUTH);
+
+        // ───────────── CARGAR TABLA ─────────────
+        cargarTabla();
+
+        DocenteService service = new DocenteService();
+
+        // ───────────── EVENTOS ─────────────
+
+        // Registrar
+        btnRegistrar.addActionListener(e ->
+                abrirDialogo(null)
+        );
+
+        // Editar
+        btnEditar.addActionListener(e -> {
+
+            int fila = tabla.getSelectedRow();
+
+            if (fila == -1) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Selecciona un docente para editar."
+                );
+
+                return;
+            }
+
+            int id = (int) modelo.getValueAt(fila, 0);
+
+            Docente docente = service.obtenerPorId(id);
+
+            abrirDialogo(docente);
+        });
+
+        // Eliminar
+        btnEliminar.addActionListener(e -> {
+
+            int fila = tabla.getSelectedRow();
+
+            if (fila == -1) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Selecciona un docente para eliminar."
+                );
+
+                return;
+            }
+
+            int confirmar = JOptionPane.showConfirmDialog(
+                    this,
+                    "¿Eliminar este docente?",
+                    "Confirmar",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirmar == JOptionPane.YES_OPTION) {
+
+                int id = (int) modelo.getValueAt(fila, 0);
+
+                service.eliminar(id);
+
+                cargarTabla();
+            }
+        });
+
+        // Buscar
+        btnBuscar.addActionListener(e ->
+                buscar(txtBuscar.getText().trim())
+        );
+
+        // Limpiar
+        btnLimpiar.addActionListener(e -> {
+
+            txtBuscar.setText("");
+
+            cargarTabla();
+        });
+    }
+
+    // ───────────── CARGAR TABLA ─────────────
+    private void cargarTabla() {
+
+        modelo.setRowCount(0);
+
+        for (Docente d : new DocenteService().obtenerTodos()) {
+
+            modelo.addRow(new Object[]{
+                    d.getIdDocente(),
+                    d.getNombre(),
+                    d.getEspecialidad()
+            });
+        }
+    }
+
+    // ───────────── BUSCAR ─────────────
+    private void buscar(String texto) {
+
+        modelo.setRowCount(0);
+
+        for (Docente d : new DocenteService().obtenerTodos()) {
+
+            if (
+                    d.getNombre()
+                            .toLowerCase()
+                            .contains(texto.toLowerCase())
+                            ||
+                            d.getEspecialidad()
+                                    .toLowerCase()
+                                    .contains(texto.toLowerCase())
+            ) {
+
+                modelo.addRow(new Object[]{
+                        d.getIdDocente(),
+                        d.getNombre(),
+                        d.getEspecialidad()
+                });
+            }
+        }
+    }
+
+    // ───────────── CREAR BOTON ─────────────
+    private JButton crearBoton(String texto, Color color) {
+
+        JButton boton = new JButton(texto);
+
+        boton.setBackground(color);
+
+        boton.setForeground(Color.WHITE);
+
+        boton.setPreferredSize(
+                new Dimension(110, 32)
+        );
+
+        boton.setFocusPainted(false);
+
+        return boton;
+    }
+
+    // ───────────── ABRIR DIALOGO ─────────────
+    private void abrirDialogo(Docente doc) {
+
+        boolean esEdicion = (doc != null);
+
+        JDialog dialogo = new JDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                esEdicion
+                        ? "Editar Docente"
+                        : "Registrar Docente",
+                true
+        );
+
+        dialogo.setSize(360, 230);
+
+        dialogo.setLocationRelativeTo(this);
+
+        dialogo.setLayout(new BorderLayout());
+
+        // ───────────── FORMULARIO ─────────────
+        JPanel form = new JPanel(new GridBagLayout());
+
+        form.setBackground(Color.WHITE);
+
+        form.setBorder(
+                BorderFactory.createEmptyBorder(15, 20, 10, 20)
+        );
+
+        GridBagConstraints g = new GridBagConstraints();
+
+        g.insets = new Insets(6, 5, 6, 5);
+
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        // Titulo
+        JLabel lbl = new JLabel(
+                esEdicion
+                        ? "  Editar Docente"
+                        : "  Registrar Docente"
+        );
+
+        lbl.setFont(new Font("Arial", Font.BOLD, 14));
+
+        lbl.setForeground(new Color(33, 97, 140));
+
+        g.gridx = 0;
+        g.gridy = 0;
+        g.gridwidth = 2;
+
+        form.add(lbl, g);
+
+        g.gridwidth = 1;
+
+        // Campos
+        JTextField txtNombre = new JTextField(15);
+        JTextField txtEspecialidad = new JTextField(15);
+
+        // Cargar datos
+        if (esEdicion) {
+
+            txtNombre.setText(doc.getNombre());
+
+            txtEspecialidad.setText(
+                    doc.getEspecialidad()
+            );
+        }
+
+        // Nombre
+        g.gridy = 1;
+        g.gridx = 0;
+
+        form.add(new JLabel("Nombre:"), g);
+
+        g.gridx = 1;
+
+        form.add(txtNombre, g);
+
+        // Especialidad
+        g.gridy = 2;
+        g.gridx = 0;
+
+        form.add(new JLabel("Especialidad:"), g);
+
+        g.gridx = 1;
+
+        form.add(txtEspecialidad, g);
+
+        // ───────────── BOTONES ─────────────
+        JPanel botones = new JPanel(
+                new FlowLayout(FlowLayout.CENTER, 10, 8)
+        );
+
+        botones.setBackground(Color.WHITE);
+
+        JButton btnGuardar = new JButton("Guardar");
+        JButton btnCancelar = new JButton("Cancelar");
+
+        btnGuardar.setBackground(new Color(39, 174, 96));
+        btnGuardar.setForeground(Color.WHITE);
+
+        btnCancelar.setBackground(Color.GRAY);
+        btnCancelar.setForeground(Color.WHITE);
+
+        botones.add(btnGuardar);
+        botones.add(btnCancelar);
+
+        // Guardar
+        btnGuardar.addActionListener(e -> {
+
+            String nombre = txtNombre.getText().trim();
+
+            String especialidad = txtEspecialidad
+                    .getText()
+                    .trim();
+
+            if (
+                    nombre.isEmpty()
+                            || especialidad.isEmpty()
+            ) {
+
+                JOptionPane.showMessageDialog(
+                        dialogo,
+                        "Todos los campos son obligatorios."
+                );
+
+                return;
+            }
+
+            DocenteService service = new DocenteService();
+
+            // Editar
+            if (esEdicion) {
+
+                doc.setNombre(nombre);
+
+                doc.setEspecialidad(especialidad);
+
+                service.actualizar(doc);
+
+                JOptionPane.showMessageDialog(
+                        dialogo,
+                        "Docente actualizado correctamente."
+                );
+
+            } else {
+
+                // Registrar
+                Docente nuevo = new Docente(
+                        0,
+                        nombre,
+                        especialidad
+                );
+
+                service.registrar(nuevo);
+
+                JOptionPane.showMessageDialog(
+                        dialogo,
+                        "Docente registrado correctamente."
+                );
+            }
+
+            cargarTabla();
+
+            dialogo.dispose();
+        });
+
+        // Cancelar
+        btnCancelar.addActionListener(e ->
+                dialogo.dispose()
+        );
+
+        dialogo.add(form, BorderLayout.CENTER);
+
+        dialogo.add(botones, BorderLayout.SOUTH);
+
+        dialogo.setVisible(true);
+    }
+}
